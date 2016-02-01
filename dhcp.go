@@ -40,6 +40,10 @@ func ServeProxyDHCP(addr string, booter Booter) error {
 			continue
 		}
 
+		udpAddr := addr.(*net.UDPAddr)
+		udpAddr.IP = addr.IP
+		udpAddr.Port = 68
+
 		req, err := ParseDHCP(buf[:n])
 
 		if err != nil {
@@ -61,7 +65,7 @@ func ServeProxyDHCP(addr string, booter Booter) error {
 		Log("ProxyDHCP", "Offering to boot %s (%s) (via %s)", req.MAC, req.ClientIP, req.ServerIP)
 		if _, err := l.WriteTo(OfferDHCP(req), &ipv4.ControlMessage{
 			IfIndex: msg.IfIndex,
-		}, addr); err != nil {
+		}, udpAddr); err != nil {
 			Log("ProxyDHCP", "Responding to %s: %s", req.MAC, err)
 			continue
 		}
