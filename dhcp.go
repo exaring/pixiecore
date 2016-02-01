@@ -18,7 +18,6 @@ type DHCPPacket struct {
 	GUID []byte
 
 	ServerIP net.IP
-	ClientIP net.IP
 }
 
 func ServeProxyDHCP(addr string, booter Booter) error {
@@ -43,9 +42,6 @@ func ServeProxyDHCP(addr string, booter Booter) error {
 
 		req, err := ParseDHCP(buf[:n])
 
-                udpAddr := addr.(*net.UDPAddr)
-                udpAddr.IP = req.ClientIP
-
 		if err != nil {
 			Debug("ProxyDHCP", "ParseDHCP: %s", err)
 			continue
@@ -62,17 +58,17 @@ func ServeProxyDHCP(addr string, booter Booter) error {
 			continue
 		}
 
-		Log("ProxyDHCP", "Offering to boot %s (via %s)", req.MAC, req.ServerIP)
+		Log("ProxyDHCP", "Offering to boot %s (%s) (via %s)", req.MAC, req.ClientIP, req.ServerIP)
 		if _, err := l.WriteTo(OfferDHCP(req), &ipv4.ControlMessage{
 			IfIndex: msg.IfIndex,
-		}, udpAddr); err != nil {
+		}, addr); err != nil {
 			Log("ProxyDHCP", "Responding to %s: %s", req.MAC, err)
 			continue
 		}
 	}
 }
 
-func OfferDHCP(p *DHCPPacket) []byte {
+func OfferDHCP(p *PXEPacket) []byte {
 	var b bytes.Buffer
 
 	// Fixed length BOOTP response
@@ -123,14 +119,16 @@ func OfferDHCP(p *DHCPPacket) []byte {
 	return b.Bytes()
 }
 
-func ParseDHCP(b []byte) (req *DHCPPacket, err error) {
+func ParseDHCP(b []byte) (req *PXEPacket, err error) {
 	if len(b) < 240 {
 		return nil, errors.New("packet too short")
 	}
 
-	ret := &DHCPPacket{
-		TID: b[4:8],
-		MAC: net.HardwareAddr(b[28:34]),
+	ret := &PXEPacket{
+		DHCPPacket: DHCPPacket{
+			TID: b[4:8],
+			MAC: net.HardwareAddr(b[28:34]),
+		},
 		ClientIP: net.IP(b[12:16]),
 	}
 
