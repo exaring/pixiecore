@@ -18,6 +18,7 @@ type DHCPPacket struct {
 	GUID []byte
 
 	ServerIP net.IP
+	ClientIP net.IP
 }
 
 func ServeProxyDHCP(addr string, booter Booter) error {
@@ -40,10 +41,11 @@ func ServeProxyDHCP(addr string, booter Booter) error {
 			continue
 		}
 
-		udpAddr := addr.(*net.UDPAddr)
-		udpAddr.IP = net.IPv4bcast
-
 		req, err := ParseDHCP(buf[:n])
+
+                udpAddr := addr.(*net.UDPAddr)
+                udpAddr.IP = req.ClientIP
+
 		if err != nil {
 			Debug("ProxyDHCP", "ParseDHCP: %s", err)
 			continue
@@ -129,17 +131,18 @@ func ParseDHCP(b []byte) (req *DHCPPacket, err error) {
 	ret := &DHCPPacket{
 		TID: b[4:8],
 		MAC: net.HardwareAddr(b[28:34]),
+		ClientIP: net.IP(b[12:16]),
 	}
 
 	// BOOTP operation type
 	if b[0] != 1 {
-		return nil, fmt.Errorf("packet from %s is not a BOOTP request", ret.MAC)
+		return nil, fmt.Errorf("packet from %s (%s) is not a BOOTP request", ret.MAC, ret.ClientIP)
 	}
 	if b[1] != 1 && b[2] != 6 {
-		return nil, fmt.Errorf("packet from %s is not for an Ethernet PHY", ret.MAC)
+		return nil, fmt.Errorf("packet from %s (%s) is not for an Ethernet PHY", ret.MAC, ret.ClientIP)
 	}
 	if !bytes.Equal(b[236:240], dhcpMagic) {
-		return nil, fmt.Errorf("packet from %s is not a DHCP request", ret.MAC)
+		return nil, fmt.Errorf("packet from %s (%s) is not a DHCP request", ret.MAC, ret.ClientIP)
 	}
 
 	typ, val, opts := dhcpOption(b[240:])
@@ -147,14 +150,14 @@ func ParseDHCP(b []byte) (req *DHCPPacket, err error) {
 		switch typ {
 		case 53:
 			if len(val) != 1 {
-				return nil, fmt.Errorf("packet from %s has malformed option 53", ret.MAC)
+				return nil, fmt.Errorf("packet from %s (%s) has malformed option 53", ret.MAC)
 			}
 			if val[0] != 1 {
-				return nil, fmt.Errorf("packet from %s is not a DHCPDISCOVER", ret.MAC)
+				return nil, fmt.Errorf("packet from %s (%s) is not a DHCPDISCOVER", ret.MAC)
 			}
 		case 93:
 			if len(val) != 2 {
-				return nil, fmt.Errorf("packet from %s has malformed option 93", ret.MAC)
+				return nil, fmt.Errorf("packet from %s (%s) has malformed option 93", ret.MAC)
 			}
 			if binary.BigEndian.Uint16(val) != 0 {
 				return nil, fmt.Errorf("%s is not an x86 PXE client", ret.MAC)
@@ -169,7 +172,7 @@ func ParseDHCP(b []byte) (req *DHCPPacket, err error) {
 	}
 
 	if ret.GUID == nil {
-		return nil, fmt.Errorf("%s is not a PXE client", ret.MAC)
+		return nil, fmt.Errorf("%s (%s) is not a PXE client", ret.MAC, ret.ClientIP)
 	}
 
 	// Valid PXE request!
