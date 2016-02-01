@@ -16,7 +16,7 @@ type DHCPPacket struct {
 	TID  []byte
 	MAC  net.HardwareAddr
 	GUID []byte
-
+	giaddr net.IP
 	ServerIP net.IP
 }
 
