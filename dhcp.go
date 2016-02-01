@@ -41,7 +41,7 @@ func ServeProxyDHCP(addr string, booter Booter) error {
 		}
 
 		udpAddr := addr.(*net.UDPAddr)
-		udpAddr.IP = addr.IP
+//		udpAddr.IP = addr.IP
 		udpAddr.Port = 68
 
 		req, err := ParseDHCP(buf[:n])
