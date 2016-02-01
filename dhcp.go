@@ -83,6 +83,7 @@ func OfferDHCP(p *PXEPacket) []byte {
 	bootp[10] = 0x80 // Please speak broadcast
 	copy(bootp[4:], p.TID)
 	copy(bootp[28:], p.MAC)
+	copy(bootp[24:], p.giaddr)
 	b.Write(bootp[:])
 
 	// DHCP magic
@@ -132,6 +133,7 @@ func ParseDHCP(b []byte) (req *PXEPacket, err error) {
 		DHCPPacket: DHCPPacket{
 			TID: b[4:8],
 			MAC: net.HardwareAddr(b[28:34]),
+			giaddr: net.IP(b[24:30]),
 		},
 		ClientIP: net.IP(b[12:16]),
 	}
