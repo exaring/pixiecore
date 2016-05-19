@@ -19,6 +19,7 @@ Copy these files into pxelinux
 Generate go file:
 
 ```
-go-bindata -ignore=README.md pxelinux
-mv bindata.go pxelinux_autogen.go
+cd pxelinux
+go-bindata -ignore=README.md .
+mv bindata.go ../pxelinux_autogen.go
 ```
