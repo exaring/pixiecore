@@ -78,8 +78,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	//pxelinux, err := Asset("lpxelinux.0")
-	pxelinux, err := Asset("pxelinux.0")
+	pxelinux, err := Asset("lpxelinux.0")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
